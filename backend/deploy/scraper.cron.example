@@ -1,0 +1,2 @@
+# Run the website scraper every day at 10:00 AM and 6:00 PM.
+0 10,18 * * * /bin/bash /path/to/RegIntel/backend/scripts/run_website_scraper.sh
