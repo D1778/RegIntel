@@ -33,25 +33,29 @@ export const Smiley = ({ isEyesClosed = false }: SmileyProps) => {
   }, [isEyesClosed]);
 
   return (
-    <div ref={faceRef} className="w-20 h-20 mx-auto mb-5 relative bg-dark-700 border border-dark-500/50 rounded-full flex items-center justify-center shadow-lg shadow-accent-purple/10">
+    <div ref={faceRef} className="w-20 h-20 mx-auto mb-5 relative bg-white border-2 border-primary/30 rounded-full flex items-center justify-center shadow-lg shadow-primary/10 overflow-hidden">
       {/* Face glow */}
-      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-accent-purple/10 to-transparent" />
+      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/5 to-transparent" />
 
       {/* Eyes */}
       <div className="flex gap-3.5 relative z-10 -mt-1">
         {[leftPupilRef, rightPupilRef].map((ref, i) => (
-          <div key={i} className="w-4 h-5 bg-dark-500 rounded-full flex items-center justify-center overflow-hidden">
+          <div key={i} className="w-4 h-5 bg-slate-100 rounded-full flex items-center justify-center overflow-hidden">
             {isEyesClosed ? (
-              <div className="w-3.5 h-px bg-gray-400 rounded-full" />
+              <div className="w-3.5 h-px bg-primary/60 rounded-full" />
             ) : (
-              <div ref={ref} className="w-2 h-2 bg-accent-purple rounded-full transition-transform duration-75" />
+              <div ref={ref} className="w-2 h-2 bg-primary rounded-full transition-transform duration-75" />
             )}
           </div>
         ))}
       </div>
 
       {/* Smile */}
-      <div className="absolute bottom-[22px] left-1/2 -translate-x-1/2 w-5 h-2.5 border-b-2 border-gray-400 rounded-b-full" />
+      <div className={`absolute bottom-[22px] left-1/2 -translate-x-1/2 w-5 h-2.5 border-b-2 border-primary/50 rounded-b-full transition-all duration-300 ${isEyesClosed ? 'scale-x-75 -translate-y-1' : ''}`} />
+
+      {/* Hands covering eyes */}
+      <div className={`absolute top-4 left-3 w-6 h-7 bg-white border-2 border-primary/30 rounded-full transition-all duration-300 z-20 ${isEyesClosed ? 'translate-y-0 rotate-[20deg]' : 'translate-y-16 -rotate-12'}`} />
+      <div className={`absolute top-4 right-3 w-6 h-7 bg-white border-2 border-primary/30 rounded-full transition-all duration-300 z-20 ${isEyesClosed ? 'translate-y-0 -rotate-[20deg]' : 'translate-y-16 rotate-12'}`} />
     </div>
   );
 };

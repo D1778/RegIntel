@@ -1,6 +1,7 @@
-import { Menu, Bell } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Link } from "react-router-dom";
 import React from "react";
+import { useAuth } from "@/context/AuthContext";
 
 export interface HeaderProps {
   title: string;
@@ -17,6 +18,25 @@ export const Header = ({
   isSidebarOpen,
   rightContent
 }: HeaderProps) => {
+  const { user } = useAuth();
+
+  const initials = (() => {
+    const name = user?.full_name?.trim();
+    if (name) {
+      return name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? "")
+        .join("");
+    }
+    const email = user?.email?.trim();
+    if (email) {
+      return email.slice(0, 2).toUpperCase();
+    }
+    return "U";
+  })();
+
   return (
     <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
       <div className="flex flex-col">
@@ -39,14 +59,10 @@ export const Header = ({
         )}
       </div>
 
-      <div className="flex items-center gap-3 sm:gap-4 self-end md:self-auto">
+      <div className="flex items-center gap-3 self-start sm:gap-4 md:self-auto">
         {rightContent}
-        <button className="w-10 h-10 bg-white rounded-full border border-gray-200 flex items-center justify-center text-text-muted hover:text-text-main hover:border-gray-300 transition-colors relative shadow-sm shrink-0">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
         <Link to="/profile" className="shrink-0 w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-sm border border-primary/20 hover:bg-primary/20 transition-colors shadow-sm">
-          JD
+          {initials}
         </Link>
       </div>
     </header>

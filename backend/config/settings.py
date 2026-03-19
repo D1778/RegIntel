@@ -10,37 +10,66 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR.parent / ".env")
+
+try:
+    import pymysql
+
+    pymysql.install_as_MySQLdb()
+except Exception:
+    # Keep startup tolerant in environments where MySQL extras are not installed yet.
+    pass
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-c4!ns99^l-9=-i09a-03=_=y)!3a3vmw04ma@3cpzj4y5t0tn1'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    raise RuntimeError('DJANGO_SECRET_KEY is required in the .env file')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = []
+
+def _get_csv_env(name, default=''):
+    raw = os.getenv(name, default)
+    return [item.strip() for item in raw.split(',') if item.strip()]
+
+
+ALLOWED_HOSTS = _get_csv_env('ALLOWED_HOSTS', 'localhost,127.0.0.1')
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
+    'scraper',
+    'users',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -54,7 +83,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -62,6 +91,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+            'builtins': ['scraper.templatetags.compat_filters'],
         },
     },
 ]
@@ -72,11 +102,69 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+def _get_env(name, fallback_name=None, default=None):
+    value = os.getenv(name)
+    if value:
+        return value
+    if fallback_name:
+        fallback_value = os.getenv(fallback_name)
+        if fallback_value:
+            return fallback_value
+    return default
+
+
+def _required_database_value(name, fallback_name=None):
+    value = _get_env(name, fallback_name)
+    if not value:
+        expected = name if not fallback_name else f'{name} (or {fallback_name})'
+        raise RuntimeError(f'{expected} is required in the .env file')
+    return value
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': _required_database_value('DEFAULT_DB_NAME', 'DB_NAME'),
+        'USER': _required_database_value('DEFAULT_DB_USER', 'DB_USER'),
+        'PASSWORD': _required_database_value('DEFAULT_DB_PASS', 'DB_PASS'),
+        'HOST': _get_env('DEFAULT_DB_HOST', 'DB_HOST', 'localhost'),
+        'PORT': _get_env('DEFAULT_DB_PORT', 'DB_PORT', '3306'),
+        'CONN_MAX_AGE': None,
+        'CONN_HEALTH_CHECKS': True,
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+        },
+    },
+    'scraper_db': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': _required_database_value('SCRAPER_DB_NAME', 'DB_NAME'),
+        'USER': _required_database_value('SCRAPER_DB_USER', 'DB_USER'),
+        'PASSWORD': _required_database_value('SCRAPER_DB_PASS', 'DB_PASS'),
+        'HOST': _get_env('SCRAPER_DB_HOST', 'DB_HOST', 'localhost'),
+        'PORT': _get_env('SCRAPER_DB_PORT', 'DB_PORT', '3306'),
+        'CONN_MAX_AGE': None,
+        'CONN_HEALTH_CHECKS': True,
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+        },
+    },
+}
+
+DATABASE_ROUTERS = ['scraper.db_router.ScraperDatabaseRouter']
+
+JAZZMIN_SETTINGS = {
+    'site_title': 'RegIntel Admin',
+    'site_header': 'RegIntel Control Panel',
+    'site_brand': 'RegIntel',
+    'welcome_sign': 'Welcome to RegIntel Admin',
+    'copyright': 'RegIntel',
+    'show_sidebar': True,
+    'navigation_expanded': True,
+    'order_with_respect_to': ['scraper.WebsiteScrapingSource', 'scraper.WebsiteScrapingSelector'],
+    'topmenu_links': [
+        {'name': 'Dashboard', 'url': 'admin:index', 'permissions': ['auth.view_user']},
+        {'model': 'scraper.WebsiteScrapingSource'},
+        {'model': 'scraper.WebsiteScrapingSelector'},
+    ],
 }
 
 
@@ -104,7 +192,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
@@ -115,8 +203,61 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ---------------------------------------------------------------------------
+# CORS
+# ---------------------------------------------------------------------------
+CORS_ALLOWED_ORIGINS = [
+    *(_get_csv_env(
+        'CORS_ALLOWED_ORIGINS',
+        'http://localhost:5173,http://127.0.0.1:5173,https://regintel-ten.vercel.app',
+    )),
+]
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = _get_csv_env(
+    'CSRF_TRUSTED_ORIGINS',
+    'http://localhost:8000,http://127.0.0.1:8000,https://regintel-ten.vercel.app',
+)
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False').lower() == 'true'
+SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'True').lower() == 'true'
+CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'True').lower() == 'true'
+
+# ---------------------------------------------------------------------------
+# REST Framework
+# ---------------------------------------------------------------------------
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
+
+# ---------------------------------------------------------------------------
+# JWT  (access=15 min, refresh=7 days, blacklist on logout)
+# ---------------------------------------------------------------------------
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+# ---------------------------------------------------------------------------
+# Password hashing – explicit PBKDF2 + SHA-256 (Django default, made explicit)
+# ---------------------------------------------------------------------------
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+]

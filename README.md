@@ -1,84 +1,118 @@
-RegIntel – Professional Regulatory Intelligence Platform
+# RegIntel
 
-A web‑based professional intelligence system that continuously monitors public regulatory and institutional websites, detects new or changed publications, classifies their relevance, summarizes them, and delivers personalized, action‑oriented alerts to professionals.
------------------------------------------------------------------------------------------------------------
+RegIntel is a regulatory intelligence platform that collects official updates from multiple Indian regulatory websites, organizes them, and delivers role-based insights through a modern dashboard.
 
-FRONTEND DEVELOPMENT PACKAGE INSTALLMENT CODES ARE BELOW:
+## What It Does
 
-> npm create vite@latest frontend -- --template react-ts
+- Scrapes notices and updates from supported regulator websites
+- Stores and manages data in MySQL
+- Tracks scraper runs and additions over time
+- Shows role-aware Alerts, Publications, and Deadlines in the frontend
+- Supports admin operations with a custom Django admin dashboard
+- Supports manual scraper trigger from admin and scheduled runs via cron
 
-> cd frontend
+## Key Features
 
-> npm install -D tailwindcss@3.4.17 postcss autoprefixer
+- JWT-based authentication (login/signup/profile/password)
+- Profession-based filtering for targeted updates
+- Publications with category and website filters, lazy loading, and detail links
+- Alerts split into New/Old with backend-driven counts
+- Deadlines with due-date status logic (Urgent/Upcoming/Normal)
+- Feedback submission and admin export
+- Scraper run analytics in admin
 
-> npx tailwindcss init -p
+## Tech Stack
 
-> npm install react-router-dom lucide-react clsx tailwind-merge class-variance-authority recharts
+- Backend: Django, Django REST Framework, SimpleJWT
+- Frontend: React + TypeScript + Vite
+- Databases: MySQL (default + scraper data)
+- Scraping: Playwright + requests
 
-> npm install -D @types/node
-------------------------------------------------------------------------------------------------------------------
+## Project Structure
 
-Open the newly created tailwind.config.js inside your frontend folder:
+- frontend: React app (UI and user flows)
+- backend: Django app (APIs, admin, scraper, auth)
 
-Replace its content with this:
+## Quick Start
 
-/** @type {import('tailwindcss').Config} */
-export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
-  theme: {
-    extend: {
-      colors: {
-        // We will add custom REGINTEL colors here later
-        sidebar: "#f8f9fa",
-      }
-    },
-  },
-  plugins: [],
-}
+### Backend
 
-File: Open src/index.css.
+1. Go to backend:
 
-replace everything in the file with below:
+   ```bash
+   cd backend
+   ```
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+2. Install dependencies:
 
-File: Open vite.config.ts
-Replace the content with this:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from "path"
+3. Install browser for scraper:
 
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-})
+   ```bash
+   playwright install chromium
+   ```
 
-tsconfig.app.json (or tsconfig.json if .app doesn't exist).
+4. Configure environment variables in root `.env` (see `.env.example`).
 
-Look for the "compilerOptions" section and add "baseUrl" and "paths" inside it, like this:
+5. Run migrations:
 
-{
-  "compilerOptions": {
-    // ... keep your existing settings ...
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  },
-  // ... keep the rest of the file ...
-}
-------------------------------------------------------------------------------------------------------------------
-> npm run dev
+   ```bash
+   python manage.py migrate
+   ```
 
-> npm install react-router-dom 
+6. Initialize scraper tables:
+
+   ```bash
+   python manage.py init_scraper_tables
+   ```
+
+7. Start backend:
+
+   ```bash
+   python manage.py runserver
+   ```
+
+### Frontend
+
+1. Go to frontend:
+
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Start frontend:
+
+   ```bash
+   npm run dev
+   ```
+
+## Scheduler
+
+To run scraping automatically at 10:00 AM and 6:00 PM (Linux cron):
+
+```cron
+0 10,18 * * * /bin/bash /path/to/RegIntel/backend/scripts/run_website_scraper.sh
+```
+
+Manual trigger is also available in admin dashboard via `Run Scraper Now`.
+
+## Admin Access
+
+- Admin URL: `/admin/`
+- Use a superuser account (`python manage.py createsuperuser`)
+
+## Notes for Deployment
+
+- Frontend must use environment-based API URLs (not localhost)
+- Backend CORS must allow your deployed frontend domain
+- Set production DB credentials via environment variables
+

@@ -1,22 +1,68 @@
 import { useState } from "react";
-import { Eye, EyeOff, UserPlus } from "lucide-react";
+import { Check, Eye, EyeOff, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { apiRegister } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { Smiley } from "@/components/Smiley";
+
 export const Signup = () => {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleSignup = (e: React.FormEvent) => {
+  const passwordRules = {
+    length: password.length >= 8,
+    digit: /\d/.test(password),
+    special: /[^A-Za-z0-9]/.test(password),
+    uppercase: /[A-Z]/.test(password),
+  };
+
+  const isPasswordValid = Object.values(passwordRules).every(Boolean);
+
+  const passwordRuleItems = [
+    { key: "length", label: "Must be 8 characters long", valid: passwordRules.length },
+    { key: "digit", label: "Must contain at least one digit", valid: passwordRules.digit },
+    { key: "special", label: "Must contain at least one special character", valid: passwordRules.special },
+    { key: "uppercase", label: "Must contain one uppercase letter", valid: passwordRules.uppercase },
+  ];
+
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isPasswordValid) {
+      setErrors({ password: "Password does not meet all required rules" });
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrors({ confirm_password: "Passwords do not match" });
+      return;
+    }
+    setErrors({});
     setLoading(true);
-    // Simulate signup
-    setTimeout(() => {
+    try {
+      await apiRegister({ full_name: fullName, email, password, confirm_password: confirmPassword });
+      await refreshUser();
+      navigate("/select-profession", { replace: true });
+    } catch (err: unknown) {
+      const data = err as Record<string, string | string[]>;
+      const flat: Record<string, string> = {};
+      for (const key in data) {
+        const val = data[key];
+        flat[key] = Array.isArray(val) ? val[0] : String(val);
+      }
+      setErrors(flat);
+    } finally {
       setLoading(false);
-      navigate("/select-profession"); // Go to step 2
-    }, 1000);
+    }
   };
 
   return (
@@ -24,7 +70,7 @@ export const Signup = () => {
       {/* Header */}
       <div className="p-6">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/WEBLOGO.png" alt="RegIntel Logo" className="h-10 w-auto" />
+          <img src="/assets/logo1.png" alt="RegIntel Logo" className="h-10 w-auto" />
           <span className="text-xl font-bold text-text-main">RegIntel</span>
         </Link>
       </div>
@@ -33,9 +79,7 @@ export const Signup = () => {
       <div className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-xl border-gray-100 bg-white">
           <CardHeader className="text-center pb-8">
-            <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4 text-primary">
-              <UserPlus size={20} />
-            </div>
+            <Smiley />
             <CardTitle className="text-2xl font-bold text-text-main">Create your account</CardTitle>
             <CardDescription className="text-text-muted mt-2">
               Start your regulatory intelligence journey.
@@ -45,12 +89,26 @@ export const Signup = () => {
             <form onSubmit={handleSignup} className="space-y-5">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-text-main">Full Name</label>
-                <Input type="text" placeholder="Full Name" required />
+                <Input
+                  type="text"
+                  placeholder="Full Name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
+                {errors.full_name && <p className="text-xs text-red-600">{errors.full_name}</p>}
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-text-main">Email Address</label>
-                <Input type="email" placeholder="name@company.com" required />
+                <Input
+                  type="email"
+                  placeholder="name@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -59,6 +117,13 @@ export const Signup = () => {
                   <Input
                     type={showPassword ? "text" : "password"}
                     placeholder="Create a strong password"
+                    value={password}
+                    onFocus={() => setIsPasswordFocused(true)}
+                    onBlur={() => setIsPasswordFocused(false)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errors.password) setErrors((p) => ({ ...p, password: "" }));
+                    }}
                     required
                   />
                   <button
@@ -69,7 +134,46 @@ export const Signup = () => {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                {isPasswordFocused && (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs">
+                    <ul className="space-y-2">
+                      {passwordRuleItems.map((item) => (
+                        <li key={item.key} className="flex items-center gap-2">
+                          {item.valid ? (
+                            <Check size={14} className="text-emerald-600" />
+                          ) : (
+                            <X size={14} className="text-red-500" />
+                          )}
+                          <span className={item.valid ? "text-emerald-700" : "text-text-muted"}>{item.label}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {errors.password && <p className="text-xs text-red-600">{errors.password}</p>}
               </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-text-main">Confirm Password</label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder={isPasswordValid ? "Confirm your password" : "Complete password rules first"}
+                    value={confirmPassword}
+                    disabled={!isPasswordValid}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (errors.confirm_password) setErrors((p) => ({ ...p, confirm_password: "" }));
+                    }}
+                    required
+                  />
+                </div>
+                {errors.confirm_password && <p className="text-xs text-red-600">{errors.confirm_password}</p>}
+              </div>
+
+              {errors.non_field_errors && (
+                <p className="text-sm font-medium text-red-600">{errors.non_field_errors}</p>
+              )}
 
               <Button type="submit" className="w-full h-11 text-base bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20" isLoading={loading}>
                 Create Account →
@@ -85,14 +189,8 @@ export const Signup = () => {
         </Card>
       </div>
 
-      {/* Footer Links */}
-      <div className="py-6 text-center space-x-6 text-xs text-text-muted">
-        <a href="#" className="hover:text-text-main">Privacy Policy</a>
-        <a href="#" className="hover:text-text-main">Terms of Service</a>
-        <a href="#" className="hover:text-text-main">Contact Admin</a>
-      </div>
-      <div className="pb-6 text-center text-[10px] text-gray-400 uppercase tracking-widest">
-        © 2024 RegIntel Security Systems. All Rights Reserved.
+      <div className="pb-6 text-center text-[10px] text-gray-400 tracking-widest">
+        © 2026 RegIntel Intelligence Systems. All rights reserved.
       </div>
     </div>
   );

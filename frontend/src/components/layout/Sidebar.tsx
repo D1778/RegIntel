@@ -1,6 +1,7 @@
-import { LayoutDashboard, Bell, FileText, Calendar, HelpCircle, ArrowLeft, LogOut, Menu } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Bell, FileText, Calendar, HelpCircle, LogOut, Menu } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -9,6 +10,14 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     const location = useLocation();
+    const navigate = useNavigate();
+    const { logout } = useAuth();
+
+    const handleLogout = async () => {
+        if (window.innerWidth < 1024) onClose();
+        await logout();
+        navigate('/', { replace: true });
+    };
 
     const menuItems = [
         { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/dashboard' },
@@ -23,7 +32,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             {/* Logo and Menu Toggle */}
             <div className="px-5 h-[72px] flex items-center justify-between mt-2">
                 <div className="flex items-center gap-2">
-                    <img src="/WEBLOGO.png" alt="RegIntel Logo" className="h-[2.75rem] w-auto" />
+                    <img src="/assets/logo1.png" alt="RegIntel Logo" className="h-[2.75rem] w-auto" />
                     <span className="text-xl font-bold text-text-main tracking-tight">RegIntel</span>
                 </div>
                 
@@ -62,26 +71,14 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             </nav>
 
             <div className="px-4 pb-8 pt-4 space-y-1 mt-auto border-t border-border">
-                <Link
-                    to="/"
-                    onClick={() => {
-                        if (window.innerWidth < 1024) onClose();
-                    }}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-md text-[15px] font-medium text-text-muted hover:text-text-main hover:bg-secondary/50 transition-colors"
-                >
-                    <ArrowLeft size={20} />
-                    Back to Home
-                </Link>
-                <Link
-                    to="/"
-                    onClick={() => {
-                        if (window.innerWidth < 1024) onClose();
-                    }}
+                <button
+                    type="button"
+                    onClick={handleLogout}
                     className="flex items-center gap-3 px-3 py-2.5 w-full rounded-md text-[15px] font-medium text-red-500 hover:bg-red-50 transition-colors text-left"
                 >
                     <LogOut size={20} className="text-red-500" />
                     Logout
-                </Link>
+                </button>
             </div>
         </div>
     );

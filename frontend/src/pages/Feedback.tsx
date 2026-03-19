@@ -4,14 +4,18 @@ import { Header } from '../components/layout/Header';
 import { Send, Mail, MapPin, Phone, CheckCircle, Clock, Zap, MessageSquareQuote } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Footer } from '../components/Footer';
+import { useResponsiveSidebar } from '@/hooks/useResponsiveSidebar';
 import { FadeIn } from "@/components/ui/FadeIn";
+import { apiSubmitFeedback } from '@/lib/api';
 
 const Feedback = () => {
   const [rating, setRating] = useState(0);
   const [hoveredStar, setHoveredStar] = useState(0);
   const [selectedType, setSelectedType] = useState('Bug Report');
   const [message, setMessage] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
+  const [errors, setErrors] = useState<{ rating?: string; type?: string; message?: string; submit?: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSidebarOpen, openSidebar, closeSidebar } = useResponsiveSidebar();
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const feedbackTypes = ['Bug Report', 'Feature Request', 'Improvement', 'Other'];
@@ -23,10 +27,44 @@ const Feedback = () => {
     'Other': 'bg-amber-50 text-amber-600 border-amber-200',
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({ rating, selectedType, message });
-    setIsSubmitted(true);
+
+    const nextErrors: { rating?: string; type?: string; message?: string } = {};
+    if (rating < 1 || rating > 5) {
+      nextErrors.rating = 'Please select a star rating.';
+    }
+    if (!feedbackTypes.includes(selectedType)) {
+      nextErrors.type = 'Please choose a valid feedback type.';
+    }
+    const wordCount = message.trim().split(/\s+/).filter(Boolean).length;
+    if (wordCount < 10) {
+      nextErrors.message = 'Please enter at least 10 words in your feedback.';
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    setErrors({});
+    setIsSubmitting(true);
+    try {
+      await apiSubmitFeedback({
+        star_rating: rating,
+        type_of_feedback: selectedType as 'Bug Report' | 'Feature Request' | 'Improvement' | 'Other',
+        message: message.trim(),
+      });
+      setIsSubmitted(true);
+    } catch (err: unknown) {
+      const data = err as Record<string, string | string[]>;
+      const detail = data?.detail;
+      setErrors({
+        submit: Array.isArray(detail) ? detail[0] : (detail as string) || 'Failed to submit feedback. Please try again.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   const resetForm = () => {
@@ -34,31 +72,32 @@ const Feedback = () => {
     setMessage('');
     setSelectedType('Bug Report');
     setIsSubmitted(false);
+    setErrors({});
   };
 
   return (
     <div className="flex min-h-screen bg-background font-sans relative overflow-x-hidden">
       <div className={`fixed inset-y-0 left-0 z-50 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out`}>
-        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
       </div>
 
       {/* Sidebar Overlay (Mobile only) */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/20 z-40 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
+          onClick={closeSidebar}
         />
       )}
 
       {/* Main Content */}
       <main className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-300 ${isSidebarOpen ? 'lg:ml-[260px]' : ''}`}>
-        <div className="p-4 sm:p-6 lg:p-12 flex-1 relative w-full max-w-full overflow-hidden">
-          <Header title="Feedback" onMenuClick={() => setIsSidebarOpen(true)} isSidebarOpen={isSidebarOpen} />
+        <div className="relative flex-1 w-full max-w-full overflow-hidden px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+          <Header title="Feedback" onMenuClick={openSidebar} isSidebarOpen={isSidebarOpen} />
 
           <div className="w-full max-w-[1400px] mx-auto">
             {/* Header */}
             <FadeIn>
-            <div className="mb-12 text-center">
+            <div className="mb-10 text-center sm:mb-12">
               <h1 className="text-4xl md:text-5xl font-black text-text-main tracking-tight">We'd love your Feedback</h1>
               <p className="text-text-muted mt-4 text-lg max-w-2xl mx-auto">
                 We're constantly looking for ways to improve RegIntel. Whether you have a question, spotted a bug, or just want to share your experience, we want to hear from you!
@@ -148,14 +187,14 @@ const Feedback = () => {
                       <label className="block text-base font-bold text-text-main mb-4">
                         How would you rate your experience?
                       </label>
-                      <div className="flex justify-center gap-4">
+                      <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
                         {[1, 2, 3, 4, 5].map((star) => {
                           const isFilled = star <= (hoveredStar || rating);
                           return (
                             <button
                               key={star}
                               type="button"
-                              className={`text-4xl transition-all duration-300 transform ${isFilled ? 'opacity-100 drop-shadow-xl scale-110 -translate-y-2' : 'opacity-30 grayscale hover:opacity-70 hover:scale-105'
+                              className={`text-3xl transition-all duration-300 transform sm:text-4xl ${isFilled ? 'opacity-100 drop-shadow-xl scale-110 -translate-y-2' : 'opacity-30 grayscale hover:opacity-70 hover:scale-105'
                                 }`}
                               onMouseEnter={() => setHoveredStar(star)}
                               onMouseLeave={() => setHoveredStar(0)}
@@ -167,6 +206,7 @@ const Feedback = () => {
                           );
                         })}
                       </div>
+                      {errors.rating && <p className="mt-3 text-sm font-medium text-red-600">{errors.rating}</p>}
                     </div>
 
                     {/* Feedback Type Selector */}
@@ -187,6 +227,7 @@ const Feedback = () => {
                           </button>
                         ))}
                       </div>
+                      {errors.type && <p className="mt-3 text-sm font-medium text-red-600">{errors.type}</p>}
                     </div>
 
                     {/* Message Input */}
@@ -200,14 +241,20 @@ const Feedback = () => {
                         className="w-full px-5 py-4 rounded-2xl border-2 border-gray-100 bg-gray-50/80 focus:bg-white focus:border-primary/50 focus:ring-4 focus:ring-primary/10 outline-none transition-all resize-none placeholder:text-gray-400 text-base text-text-main leading-relaxed shadow-inner"
                         required
                       />
+                      {errors.message && <p className="mt-3 text-sm font-medium text-red-600">{errors.message}</p>}
                     </div>
+
+                    {errors.submit && (
+                      <p className="text-sm font-medium text-red-600 text-center">{errors.submit}</p>
+                    )}
 
                       <div className="flex justify-center pt-2">
                         <button
                           type="submit"
+                          disabled={isSubmitting}
                           className="w-full sm:w-2/3 px-8 py-4 bg-primary hover:bg-primary-hover text-white font-bold text-lg rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/30 hover:-translate-y-1"
                         >
-                          Send Feedback <Send size={20} className="ml-1" />
+                          {isSubmitting ? 'Submitting...' : 'Send Feedback'} <Send size={20} className="ml-1" />
                         </button>
                       </div>
                     </motion.form>

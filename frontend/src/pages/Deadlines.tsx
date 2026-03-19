@@ -1,25 +1,108 @@
 import Sidebar from '../components/layout/Sidebar';
 import { Header } from '../components/layout/Header';
-import { Calendar, AlertCircle, Clock, CheckCircle2, Search } from 'lucide-react';
-import { useState } from 'react';
+import { Calendar, AlertCircle, Clock, CheckCircle2, Search, ExternalLink } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Footer } from '../components/Footer';
-import { cbicDeadlines } from '../lib/cbicData';
+import { apiGetDeadlines } from '@/lib/api';
 import { FadeIn } from "@/components/ui/FadeIn";
-import { Button } from "@/components/ui/Button";
+import { useResponsiveSidebar } from '@/hooks/useResponsiveSidebar';
+
+const DEADLINES_CACHE_TTL_MS = 5 * 60 * 1000;
+
+interface DeadlineRow {
+  id: string;
+  title: string;
+  category: string;
+  bodyDate: string;
+  dueDate: string;
+  daysLeft: number;
+  status: 'Urgent' | 'Upcoming' | 'Normal';
+  url: string;
+}
+
+type DeadlinesCache = {
+  rows: DeadlineRow[];
+  counts: { urgent: number; thisWeek: number; total: number };
+  cachedAt: number;
+};
+
+let deadlinesPageCache: DeadlinesCache | null = null;
 
 const Deadlines = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
+  const { isSidebarOpen, openSidebar, closeSidebar } = useResponsiveSidebar();
   const [searchQuery, setSearchQuery] = useState('');
+  const [deadlinesData, setDeadlinesData] = useState<DeadlineRow[]>(deadlinesPageCache?.rows ?? []);
+  const [counts, setCounts] = useState(deadlinesPageCache?.counts ?? { urgent: 0, thisWeek: 0, total: 0 });
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  const filteredData = cbicDeadlines.filter(item => {
+  useEffect(() => {
+    let cancelled = false;
+
+    const cached = deadlinesPageCache;
+    const cacheIsFresh = cached && Date.now() - cached.cachedAt < DEADLINES_CACHE_TTL_MS;
+    if (cacheIsFresh && cached) {
+      setDeadlinesData(cached.rows);
+      setCounts(cached.counts);
+      setIsLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const loadDeadlines = async () => {
+      setIsLoading(true);
+      setLoadError('');
+      try {
+        const response = await apiGetDeadlines();
+        if (cancelled) return;
+
+        const mapped: DeadlineRow[] = response.results.map((item) => ({
+          id: item.id,
+          title: item.title,
+          category: item.category,
+          bodyDate: item.body_date,
+          dueDate: item.due_date,
+          daysLeft: item.days_left,
+          status: item.status,
+          url: item.url,
+        }));
+
+        const nextCounts = {
+          urgent: response.counts.urgent,
+          thisWeek: response.counts.this_week,
+          total: response.counts.total,
+        };
+
+        setDeadlinesData(mapped);
+        setCounts(nextCounts);
+
+        deadlinesPageCache = {
+          rows: mapped,
+          counts: nextCounts,
+          cachedAt: Date.now(),
+        };
+      } catch {
+        if (cancelled) return;
+        setDeadlinesData([]);
+        setCounts({ urgent: 0, thisWeek: 0, total: 0 });
+        setLoadError('Unable to load deadlines right now.');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void loadDeadlines();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredData = deadlinesData.filter(item => {
     const normalizedQuery = searchQuery.toLowerCase();
     return item.title.toLowerCase().includes(normalizedQuery) ||
            item.category.toLowerCase().includes(normalizedQuery);
   });
-
-  const urgentCount = cbicDeadlines.filter((item) => item.status === 'Urgent').length;
-  const weekCount = cbicDeadlines.filter((item) => item.daysLeft <= 7).length;
-  const totalCount = cbicDeadlines.length;
 
   const statusStyle = (s: string) =>
     s === 'Urgent' ? 'bg-red-50 text-red-600 border-red-100' :
@@ -32,36 +115,40 @@ const Deadlines = () => {
   return (
     <div className="flex min-h-screen bg-background font-sans relative overflow-x-hidden">
       <div className={`fixed inset-y-0 left-0 z-50 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out`}>
-        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
       </div>
 
       {/* Sidebar Overlay (Mobile only) */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/20 z-40 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
+          onClick={closeSidebar}
         />
       )}
 
       {/* Main Content */}
       <main className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-300 ${isSidebarOpen ? 'lg:ml-[260px]' : ''}`}>
-        <div className="p-4 sm:p-6 lg:p-8 flex-1 w-full max-w-full overflow-hidden">
-          <Header title="Upcoming Deadlines" onMenuClick={() => setIsSidebarOpen(true)} isSidebarOpen={isSidebarOpen} />
+        <div className="flex-1 w-full max-w-full overflow-hidden px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <Header title="Upcoming Deadlines" onMenuClick={openSidebar} isSidebarOpen={isSidebarOpen} />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-7">
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center">
               <span className="text-sm text-text-muted">Urgent</span>
-              <span className="text-3xl font-bold text-red-500">{urgentCount}</span>
+              <span className="text-3xl font-bold text-red-500">{counts.urgent}</span>
             </div>
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center">
               <span className="text-sm text-text-muted">This Week</span>
-              <span className="text-3xl font-bold text-amber-500">{weekCount}</span>
+              <span className="text-3xl font-bold text-amber-500">{counts.thisWeek}</span>
             </div>
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center">
               <span className="text-sm text-text-muted">Total</span>
-              <span className="text-3xl font-bold text-primary">{totalCount}</span>
+              <span className="text-3xl font-bold text-primary">{counts.total}</span>
             </div>
           </div>
+
+          {loadError && !isLoading && (
+            <div className="mb-4 text-center text-red-600 text-sm">{loadError}</div>
+          )}
 
           <div className="relative mb-6">
             <input
@@ -86,7 +173,17 @@ const Deadlines = () => {
                   <div className="col-span-1 text-center">Action</div>
                 </div>
                 <div className="divide-y divide-gray-100">
-                  {filteredData.length > 0 ? (
+                  {isLoading ? (
+                    <div className="px-6 py-6">
+                      <div className="animate-pulse space-y-4">
+                        <div className="h-4 w-28 rounded bg-gray-200" />
+                        <div className="h-4 w-full rounded bg-gray-200" />
+                        <div className="h-4 w-5/6 rounded bg-gray-200" />
+                        <div className="h-4 w-2/3 rounded bg-gray-200" />
+                      </div>
+                      <div className="mt-4 text-sm text-text-muted">Loading deadlines...</div>
+                    </div>
+                  ) : filteredData.length > 0 ? (
                     filteredData.map((item, index) => (
                     <FadeIn key={item.id} delay={index * 0.05} direction="up" fullWidth>
                     <div className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-gray-50 transition-colors">
@@ -114,14 +211,14 @@ const Deadlines = () => {
                         </span>
                       </div>
                       <div className="col-span-1 flex justify-center">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => window.open(item.url, '_blank')}
-                          className="text-primary hover:text-primary hover:bg-primary/10 transition-colors"
-                        >
-                          View
-                        </Button>
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-hover"
+                            >
+                              View <ExternalLink size={12} />
+                            </a>
                       </div>
                     </div>
                     </FadeIn>
@@ -129,13 +226,76 @@ const Deadlines = () => {
                   ) : (
                     <div className="py-12 text-center">
                       <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                      <h3 className="text-sm font-medium text-text-main">No deadlines found</h3>
-                      <p className="text-sm text-text-muted mt-1">Try adjusting your search query.</p>
+                      <h3 className="text-sm font-medium text-text-main">Relax, you are upto date.</h3>
+                      <p className="text-sm text-text-muted mt-1">No active deadlines right now.</p>
                     </div>
                   )}
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="space-y-4 md:hidden">
+            {isLoading ? (
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="animate-pulse space-y-4">
+                  <div className="h-4 w-28 rounded bg-gray-200" />
+                  <div className="h-4 w-full rounded bg-gray-200" />
+                  <div className="h-4 w-3/4 rounded bg-gray-200" />
+                </div>
+                <div className="mt-4 text-sm text-text-muted">Loading deadlines...</div>
+              </div>
+            ) : filteredData.length > 0 ? filteredData.map((item, index) => (
+              <FadeIn key={item.id} delay={index * 0.05} direction="up">
+              <div key={item.id} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="mb-4 flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-amber-100 bg-amber-50">
+                    <Calendar size={16} className="text-amber-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold text-text-main">{item.title}</h3>
+                    <p className="mt-1 text-xs text-text-muted">{item.category}</p>
+                  </div>
+                  <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyle(item.status)}`}>
+                    {statusIcon(item.status)} {item.status}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-lg bg-gray-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Body Date</p>
+                    <p className="mt-1 text-text-main">{item.bodyDate}</p>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Due Date</p>
+                    {!item.dueDate || item.dueDate === 'N/A' || item.dueDate.toLowerCase() === 'not applicable' ? (
+                      <p className="mt-1 text-text-muted">-</p>
+                    ) : (
+                      <>
+                        <p className="mt-1 text-text-main">{item.dueDate}</p>
+                        <p className="text-xs text-text-muted">{item.daysLeft} days left</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-hover"
+                >
+                  View source <ExternalLink size={12} />
+                </a>
+              </div>
+              </FadeIn>
+            )) : (
+              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
+                <Calendar className="mx-auto mb-3 h-12 w-12 text-gray-300" />
+                <h3 className="text-sm font-medium text-text-main">Relax, you are upto date.</h3>
+                <p className="mt-1 text-sm text-text-muted">No active deadlines right now.</p>
+              </div>
+            )}
           </div>
         </div>
         <Footer />

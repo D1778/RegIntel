@@ -1,5 +1,5 @@
 import {
-  Bell, LayoutDashboard, TrendingUp, Globe, BarChart3, ShieldCheck
+  Bell, LayoutDashboard, TrendingUp, Globe, BarChart3, ShieldCheck, Check
 } from "lucide-react";
 import { FadeIn } from "@/components/ui/FadeIn";
 import { motion } from "framer-motion";
@@ -27,26 +27,25 @@ const features = [
 
 export const Features = () => {
   return (
-    <section id="features" className="py-16 md:py-20 bg-background border-t border-border/40">
-      <div className="max-w-7xl mx-auto">
-        {/* Upper Features Section (Value Proposition) */}
+    <section id="features" className="border-t border-border/40 bg-background py-16 md:py-20">
+      <div className="mx-auto max-w-7xl">
         <FadeIn direction="up">
-        <div className="w-full px-6 lg:px-8">
-          <div id="value-proposition" className="text-center mb-16 md:mb-24">
-            <span className="text-sm font-bold text-primary tracking-[0.2em] uppercase mb-4 block">FEATURES</span>
-            <h2 className="text-3xl md:text-4xl font-bold text-text-main leading-tight mb-6">
-              What is RegIntel?
-            </h2>
-            <p className="text-text-muted max-w-3xl mx-auto leading-relaxed text-lg">
-              A sophisticated compliance asset designed for the modern regulatory landscape.
-              We unify fragmented data into a cohesive intelligence layer that empowers
-              legal and compliance teams to lead with confidence.
-            </p>
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div id="value-proposition" className="mb-16 text-center md:mb-24">
+              <span className="mb-4 inline-flex items-center rounded-full bg-primary/10 px-4 py-1.5 text-sm font-bold uppercase tracking-widest text-primary">FEATURES</span>
+              <h2 className="mb-6 text-3xl font-bold leading-tight text-text-main md:text-4xl lg:text-5xl">
+                What is RegIntel?
+              </h2>
+              <p className="mx-auto max-w-3xl text-lg leading-relaxed text-text-muted md:text-xl">
+                A sophisticated compliance asset designed for the modern regulatory landscape.
+                We unify fragmented data into a cohesive intelligence layer that empowers
+                legal and compliance teams to lead with confidence.
+              </p>
+            </div>
           </div>
-        </div>
         </FadeIn>
 
-        <div className="w-full px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
           {/* Feature Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {features.map((f, idx) => (
@@ -69,34 +68,50 @@ export const Features = () => {
 
       {/* Redesigned Impact Section - Solution Grid Style */}
       <FadeIn direction="up">
-      <div id="impact" className="mt-16 max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="bg-slate-50/50 rounded-[3rem] py-16 px-6 lg:px-12 border border-border/50">
-          <FadeIn>
-          <div className="text-center mb-16 md:mb-20">
-            <span className="text-sm font-bold text-primary tracking-[0.2em] uppercase mb-4 block">Impact & Value</span>
-            <h3 className="text-3xl md:text-4xl font-bold text-text-main mb-6">How RegIntel makes an impact</h3>
-            <p className="text-text-muted text-lg max-w-2xl mx-auto">Empowering your compliance journey with intelligence.</p>
-          </div>
-          </FadeIn>
+        <div id="impact" className="mt-16 px-4 sm:px-6 lg:px-8">
+          <div className="rounded-[2rem] border border-border/50 bg-slate-50/50 px-6 py-12 sm:px-10 md:px-14 md:py-16 lg:rounded-[3rem] lg:px-12">
+            <FadeIn>
+              <div className="mb-16 text-center md:mb-20">
+                <span className="mb-4 inline-flex items-center rounded-full bg-primary/10 px-4 py-1.5 text-sm font-bold uppercase tracking-widest text-primary">Impact & Value</span>
+                <h3 className="mb-6 text-3xl font-bold text-text-main md:text-4xl">How RegIntel makes an impact</h3>
+                <p className="mx-auto max-w-2xl text-lg text-text-muted">Empowering your compliance journey with intelligence.</p>
+              </div>
+            </FadeIn>
 
-          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="grid gap-8 lg:grid-cols-3">
             {/* Card 1: Streamline Compliance */}
             <FadeIn delay={0.1}>
             <div className="bg-white p-10 rounded-2xl shadow-sm border border-border/40 flex flex-col items-start transition-shadow hover:shadow-md hover:-translate-y-1 duration-300 h-full">
-              <div className="w-14 h-14 bg-green-50 text-green-600 rounded-xl flex items-center justify-center mb-8">
-                <ShieldCheck className="w-7 h-7" />
+              <div className="relative mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-[0_18px_40px_-24px_rgba(15,23,42,0.28)] ring-1 ring-primary/15">
+                <ShieldCheck className="h-8 w-8" />
+                <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white shadow-sm ring-4 ring-white">
+                  <Check className="h-3.5 w-3.5" />
+                </div>
               </div>
               <h4 className="text-2xl font-bold text-text-main mb-4">Streamline Compliance</h4>
               <p className="text-text-muted leading-relaxed text-lg mb-8">
                 Simplify complex regulatory workflows with automated tracking and unified dashboards designed for efficiency.
               </p>
               {/* Visual Placeholder for Dashboard UI */}
-              <div className="mt-auto w-full h-44 bg-slate-50 rounded-xl border border-slate-100 p-6 flex flex-col gap-3">
-                <div className="h-3 w-2/3 bg-slate-200 rounded-full" />
-                <div className="h-3 w-full bg-slate-100 rounded-full" />
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="w-12 h-12 rounded-full bg-green-50 text-green-600 flex items-center justify-center">
-                    <LayoutDashboard className="w-6 h-6" />
+              <div className="mt-auto flex h-44 w-full flex-col gap-4 rounded-xl border border-slate-100 bg-[linear-gradient(180deg,_rgba(248,250,252,1)_0%,_rgba(241,245,249,0.72)_100%)] p-6">
+                <div className="h-3 w-2/3 rounded-full bg-slate-200" />
+                <div className="h-3 w-full rounded-full bg-slate-100" />
+                <div className="flex flex-1 items-center justify-center gap-3">
+                  <div className="h-16 w-14 rounded-2xl border border-emerald-100 bg-white/80 p-3 shadow-sm">
+                    <div className="mb-2 h-2 w-7 rounded-full bg-emerald-100" />
+                    <div className="h-2 w-5 rounded-full bg-slate-100" />
+                  </div>
+                  <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm ring-1 ring-primary/15">
+                    <ShieldCheck className="h-7 w-7" />
+                    <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-primary ring-4 ring-slate-50" />
+                  </div>
+                  <div className="h-16 w-14 rounded-2xl border border-slate-200 bg-white/80 p-3 shadow-sm">
+                    <div className="mb-2 h-2 w-6 rounded-full bg-slate-200" />
+                    <div className="flex gap-1">
+                      <div className="h-6 w-2 rounded-full bg-primary-200" />
+                      <div className="h-4 w-2 rounded-full bg-primary-300" />
+                      <div className="h-7 w-2 rounded-full bg-primary-500" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -148,7 +163,7 @@ export const Features = () => {
             </FadeIn>
           </div>
         </div>
-      </div>
+        </div>
       </FadeIn>
     </section>
   );

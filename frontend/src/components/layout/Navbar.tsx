@@ -17,18 +17,18 @@ export const Navbar = () => {
     return (
         <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? "bg-white/80 backdrop-blur-md border-b border-border shadow-sm" : "bg-transparent"
             } py-4`}>
-            <div className="max-w-7xl mx-auto px-6 h-12 flex justify-between items-center">
+            <div className="mx-auto flex h-12 max-w-7xl items-center justify-between px-4 sm:px-6">
                 {/* Logo */}
                 <Link to="/" className="flex items-center gap-2.5">
-                    <img src="/WEBLOGO.png" alt="RegIntel Logo" className="h-[3.25rem] w-auto" />
-                    <span className="text-xl font-bold text-text-main tracking-tight">RegIntel</span>
+                    <img src="/assets/logo1.png" alt="RegIntel Logo" className="h-[3.25rem] w-auto" />
+                    <span className="text-lg font-bold text-text-main tracking-tight sm:text-xl">RegIntel</span>
                 </Link>
 
                 {/* Desktop Links */}
                 <div className="hidden md:flex items-center gap-8">
-                    <a href="#features" className="text-sm font-medium text-text-main hover:text-primary transition-colors uppercase">FEATURES</a>
-                    <a href="#impact" className="text-sm font-medium text-text-main hover:text-primary transition-colors uppercase">IMPACT</a>
-                    <a href="#about" className="text-sm font-medium text-text-main hover:text-primary transition-colors uppercase">ABOUT</a>
+                    <a href="#features" className="text-sm font-medium text-text-main hover:text-primary transition-colors uppercase relative after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-primary after:transition-all after:duration-300">FEATURES</a>
+                    <a href="#impact" className="text-sm font-medium text-text-main hover:text-primary transition-colors uppercase relative after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-primary after:transition-all after:duration-300">IMPACT</a>
+                    <a href="#about" className="text-sm font-medium text-text-main hover:text-primary transition-colors uppercase relative after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-primary after:transition-all after:duration-300">ABOUT</a>
                 </div>
 
                 {/* Desktop CTA */}
